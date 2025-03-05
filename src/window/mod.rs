@@ -44,7 +44,7 @@ use std::io::Read;
 use crate::{
     cmd_line::{CmdLineSettings, GeometryArgs},
     frame::Frame,
-    renderer::{build_window_config, DrawCommand, WindowConfig},
+    renderer::{build_window_config, DrawCommand, ImageRenderOpts, WindowConfig},
     settings::{
         clamped_grid_size, load_last_window_settings, save_window_size, HotReloadConfigs,
         PersistentWindowSettings, Settings, SettingsChanged,
@@ -79,6 +79,8 @@ pub enum WindowCommand {
     ListAvailableFonts,
     FocusWindow,
     Minimize,
+    UploadImage(u64, String),
+    ShowImage(u64, ImageRenderOpts),
     #[allow(dead_code)] // Theme change is only used on macOS right now
     ThemeChanged(Option<Theme>),
     #[cfg(windows)]

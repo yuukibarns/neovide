@@ -12,6 +12,7 @@ use crate::{
 };
 
 const INIT_LUA: &str = include_str!("../../lua/init.lua");
+const IMAGE_LUA: &str = include_str!("../../lua/image.lua");
 
 pub async fn get_api_information(nvim: &Neovim<NeovimWriter>) -> Result<ApiInformation> {
     // Retrieve the channel number for communicating with neovide.
@@ -90,6 +91,9 @@ pub async fn setup_neovide_specific_state(
     )
     .await
     .context("Error when running Neovide init.lua")?;
+    nvim.execute_lua(IMAGE_LUA, vec![])
+        .await
+        .context("Error when running img.lua")?;
 
     Ok(())
 }
