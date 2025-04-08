@@ -4,6 +4,7 @@ pub mod cursor_renderer;
 pub mod fonts;
 pub mod grid_renderer;
 mod image_renderer;
+mod kitty_image;
 pub mod opengl;
 pub mod profiler;
 mod rendered_layer;
@@ -60,8 +61,8 @@ use cursor_renderer::CursorRenderer;
 pub use fonts::caching_shaper::CachingShaper;
 pub use grid_renderer::GridRenderer;
 pub use image_renderer::*;
+pub use kitty_image::*;
 pub use rendered_window::{RenderedWindow, WindowDrawCommand, WindowDrawDetails};
-
 pub use vsync::VSync;
 
 use self::fonts::font_options::FontOptions;
