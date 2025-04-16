@@ -7,7 +7,7 @@ use crate::{
     cmd_line::CmdLineSettings,
     editor::{AnchorInfo, Line, LineFragment, SortOrder, WindowType},
     profiling::{tracy_plot, tracy_zone},
-    renderer::{animation_utils::*, GridRenderer, RendererSettings},
+    renderer::{animation_utils::*, image_renderer::ImageFragment, GridRenderer, RendererSettings},
     settings::Settings,
     units::{to_skia_rect, GridPos, GridRect, GridScale, GridSize, PixelPos, PixelRect, PixelVec},
     utils::RingBuffer,
@@ -62,6 +62,7 @@ struct RenderedLine {
     background_picture: Option<Picture>,
     foreground_picture: Option<Picture>,
     boxchar_picture: Option<(Picture, PixelPos<f32>)>,
+    image_fragments: Vec<ImageFragment>,
     has_transparency: bool,
     is_valid: bool,
 }
@@ -400,6 +401,7 @@ impl RenderedWindow {
                     background_picture: None,
                     foreground_picture: None,
                     boxchar_picture: None,
+                    image_fragments: Vec::new(),
                     has_transparency: false,
                     is_valid: false,
                 };
@@ -613,7 +615,7 @@ impl RenderedWindow {
         let grid_scale = grid_renderer.grid_scale;
 
         let mut prepare_line = |line: &Rc<RefCell<RenderedLine>>| {
-            let mut line = line.borrow_mut();
+            let line = &mut *line.borrow_mut();
             let position = self.grid_destination * grid_renderer.grid_scale;
             let boxchar_moved = match line.boxchar_picture {
                 None => false,
@@ -630,6 +632,7 @@ impl RenderedWindow {
             let line_size = GridSize::new(self.grid_size.width, 1) * grid_scale;
             let grid_rect = Rect::from_wh(line_size.width, line_size.height);
             let canvas = recorder.begin_recording(grid_rect, false);
+            line.image_fragments.clear();
 
             let mut has_transparency = false;
             let mut custom_background = false;
@@ -655,6 +658,7 @@ impl RenderedWindow {
                     boxchar_canvas,
                     &line_fragment,
                     position,
+                    &mut line.image_fragments,
                 );
                 text_drawn |= frag_text_drawn;
                 boxchar_drawn |= frag_box_drawn;

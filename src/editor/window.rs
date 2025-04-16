@@ -5,7 +5,7 @@ use log::warn;
 use crate::{
     bridge::GridLineCell,
     editor::{grid::CharacterGrid, style::Style, AnchorInfo, DrawCommand, DrawCommandBatcher},
-    renderer::{box_drawing, WindowDrawCommand},
+    renderer::{box_drawing, WindowDrawCommand, IMAGE_PLACEHOLDER},
     units::{GridRect, GridSize},
 };
 
@@ -252,7 +252,8 @@ impl Window {
     ) -> (usize, LineFragmentData) {
         let row = self.grid.row(row_index).unwrap();
 
-        let (_, style) = &row[start];
+        let (start_char, style) = &row[start];
+        let is_image = start_char.starts_with(IMAGE_PLACEHOLDER);
 
         let mut width = 0u32;
         let mut last_box_char = None;
@@ -263,6 +264,9 @@ impl Window {
         for (cluster, possible_end_style) in row.iter().take(self.grid.width).skip(start) {
             // Style doesn't match. Draw what we've got.
             if style != possible_end_style {
+                break;
+            }
+            if is_image != character.starts_with(IMAGE_PLACEHOLDER) {
                 break;
             }
 
