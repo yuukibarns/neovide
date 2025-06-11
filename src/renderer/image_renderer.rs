@@ -213,6 +213,27 @@ impl ImageRenderer {
                     },
                     |size| GridSize::from(size) * grid_scale,
                 );
+
+                let image_dimensions = image.dimensions();
+                let image_dimensions = PixelSize::new(
+                    image_dimensions.width as f32,
+                    image_dimensions.height as f32,
+                );
+                let image_aspect = image_dimensions.width / image_dimensions.height;
+
+                let size = match (size.width, size.height) {
+                    (0.0, 0.0) => PixelSize::default(),
+                    (x, 0.0) => PixelSize::new(x, x / image_aspect),
+                    (0.0, y) => PixelSize::new(y * image_aspect, y),
+                    (x, y) => {
+                        let grid_aspect = x / y;
+                        if image_aspect >= grid_aspect {
+                            PixelSize::new(x, x / image_aspect)
+                        } else {
+                            PixelSize::new(y * image_aspect, y)
+                        }
+                    }
+                };
                 let dst = PixelRect::from_origin_and_size(pos, size);
                 let crop = opts.crop.as_ref().map(|crop| (to_skia_rect(&crop.into())));
                 let src = crop.as_ref().map(|crop| (crop, SrcRectConstraint::Strict));
