@@ -323,7 +323,7 @@ impl<'a> FragmentRenderer<'a> {
             let paint = Paint::default();
             // Kitty uses Linear filtering, so use that here as well
             // It does not look very good when upscaling some images like logos though
-            let sampling_options = SamplingOptions::new(FilterMode::Linear, MipmapMode::Linear);
+            let sampling_options = SamplingOptions::new(FilterMode::Nearest, MipmapMode::Nearest);
             canvas.save();
             canvas.set_matrix(&image.skia_matrix);
 
