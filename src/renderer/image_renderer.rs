@@ -276,15 +276,16 @@ impl<'a> FragmentRenderer<'a> {
                         .loaded_images
                         .get(&(fragment.image_id as u64))
                         .unwrap();
-                    let x_scale = (display.columns as f32 * scale.width()) / image.width() as f32;
-                    let y_scale = (display.rows as f32 * scale.height()) / image.height() as f32;
+                    let x_scale = 1.0;
+                    let y_scale = 1.0;
                     let matrix = Matrix3::from_scale((x_scale, y_scale).into());
                     let inv_matrix = matrix.inverse();
                     let skia_matrix = Matrix4::<f32>::from_mat3(matrix);
                     let skia_matrix = M44::col_major(cast_ref(skia_matrix.as_ref()));
                     let image_scale = GridScale::new(PixelSize::new(
                         image.width() as f32 / display.columns as f32,
-                        image.height() as f32 / display.rows as f32,
+                        // fits the grid cell height to avoid gaps between fragments
+                        scale.height() as f32,
                     ));
                     VisibleImage {
                         image,
@@ -295,13 +296,21 @@ impl<'a> FragmentRenderer<'a> {
                         image_scale,
                     }
                 });
-            let dest_pos = GridPos::new(fragment.dst_col, 0) * *scale
-                + PixelVec::new(matrix[Member::TransX], matrix[Member::TransY]);
-            let dest_pos = image.inv_matrix.transform_point2(dest_pos.to_untyped());
-            image
-                .xform
-                .push(RSXform::new(1.0, 0.0, (dest_pos.x, dest_pos.y)));
+            // Calculate destination position with proper grid alignment
+            let dest_x = fragment.dst_col as f32 * scale.width();
+            let dest_y = 0.0; // Y-position handled per fragment
 
+            // Apply global translation from the line matrix
+            let global_x = matrix[Member::TransX];
+            let global_y = matrix[Member::TransY];
+
+            image.xform.push(RSXform::new(
+                1.0,
+                0.0,
+                (dest_x + global_x, dest_y + global_y),
+            ));
+
+            // Calculate source rectangle
             let src_min = GridPos::new(fragment.src_range.start, fragment.src_row);
             let src_max = GridPos::new(fragment.src_range.end, fragment.src_row + 1);
             let src_rect = GridRect::new(src_min, src_max) * image.image_scale;
@@ -317,16 +326,34 @@ impl<'a> FragmentRenderer<'a> {
             let sampling_options = SamplingOptions::new(FilterMode::Linear, MipmapMode::Linear);
             canvas.save();
             canvas.set_matrix(&image.skia_matrix);
-            canvas.draw_atlas(
-                image.image,
-                &image.xform,
-                &image.tex,
-                None,
-                BlendMode::Src,
-                sampling_options,
-                None,
-                &paint,
-            );
+
+            // Get image bounds once
+            let img_bounds = Rect::from_size(image.image.dimensions());
+            let mut draw_calls = Vec::with_capacity(image.xform.len());
+
+            // Pre-process all fragments
+            for (xform, tex) in image.xform.iter().zip(image.tex.iter()) {
+                let mut clipped = *tex;
+                // Retain only the texture within img_bounds to eliminate artifacts
+                if clipped.intersect(img_bounds) {
+                    draw_calls.push((*xform, clipped));
+                }
+            }
+
+            // Batch draw visible fragments
+            if !draw_calls.is_empty() {
+                let (xforms, rects): (Vec<_>, Vec<_>) = draw_calls.into_iter().unzip();
+                canvas.draw_atlas(
+                    image.image,
+                    &xforms,
+                    &rects,
+                    None,
+                    BlendMode::Src,
+                    sampling_options,
+                    None,
+                    &paint,
+                );
+            }
             canvas.restore();
         }
     }
