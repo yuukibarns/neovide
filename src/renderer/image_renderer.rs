@@ -298,7 +298,7 @@ impl<'a> FragmentRenderer<'a> {
                 });
             // Calculate destination position with proper grid alignment
             let dest_x = fragment.dst_col as f32 * scale.width();
-            let dest_y = 0.0; // Y-position handled per fragment
+            let dest_y = ((scale.height() - image.image.height() as f32) * 0.5).max(0.0); // Y-position handled per fragment
 
             // Apply global translation from the line matrix
             let global_x = matrix[Member::TransX];
@@ -323,7 +323,7 @@ impl<'a> FragmentRenderer<'a> {
             let paint = Paint::default();
             // Kitty uses Linear filtering, so use that here as well
             // It does not look very good when upscaling some images like logos though
-            let sampling_options = SamplingOptions::new(FilterMode::Nearest, MipmapMode::Nearest);
+            let sampling_options = SamplingOptions::new(FilterMode::Linear, MipmapMode::Linear);
             canvas.save();
             canvas.set_matrix(&image.skia_matrix);
 
