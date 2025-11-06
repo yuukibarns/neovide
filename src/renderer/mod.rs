@@ -62,7 +62,7 @@ pub use fonts::caching_shaper::CachingShaper;
 pub use grid_renderer::GridRenderer;
 pub use image_renderer::*;
 pub use kitty_image::*;
-pub use rendered_window::{LineFragment, RenderedWindow, WindowDrawCommand, WindowDrawDetails};
+pub use rendered_window::{RenderedWindow, WindowDrawCommand, WindowDrawDetails};
 pub use vsync::VSync;
 
 use self::fonts::font_options::FontOptions;
@@ -137,7 +137,7 @@ impl Default for RendererSettings {
 // window) are sorted as larger than the ones that should be handled later
 // So the order of the variants here matters so that the derive implementation can get
 // the order in the binary heap correct
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum DrawCommand {
     UpdateCursor(Cursor),
     FontChanged(String),
@@ -149,7 +149,6 @@ pub enum DrawCommand {
         grid_id: u64,
         command: WindowDrawCommand,
     },
-    CloseWindow(u64),
 }
 
 pub struct Renderer {
@@ -496,7 +495,6 @@ impl Renderer {
             DrawCommand::UIReady => {
                 result.should_show = true;
             }
-            _ => {}
         }
     }
 
