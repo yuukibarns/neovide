@@ -209,7 +209,6 @@ impl GridRenderer {
         ) {
             return (false, false);
         }
-        let foreground_color = foreground_color.to_color();
 
         if let Some(underline_style) = style.underline {
             let stroke_size = self.shaper.stroke_size();
