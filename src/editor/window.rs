@@ -266,7 +266,7 @@ impl Window {
             if style != possible_end_style {
                 break;
             }
-            if is_image != character.starts_with(IMAGE_PLACEHOLDER) {
+            if is_image != cluster.starts_with(IMAGE_PLACEHOLDER) {
                 break;
             }
 

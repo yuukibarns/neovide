@@ -202,14 +202,13 @@ impl GridRenderer {
         let mut text_drawn = false;
         if parse_kitty_image_placeholder(
             text,
-            grid_position.x.try_into().unwrap(),
+            cells.start,
             foreground_color.to_bytes(),
             underline_color.to_bytes(),
             image_fragments,
         ) {
             return (false, false);
         }
-        let foreground_color = foreground_color.to_color();
 
         if let Some(underline_style) = style.underline {
             let stroke_size = self.shaper.stroke_size();

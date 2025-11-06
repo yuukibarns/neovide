@@ -19,7 +19,7 @@ use std::{collections::HashMap, ops::Range};
 
 use super::kitty_image::{Display, ImageFormat};
 use super::{KittyImage, Transmit};
-use crate::units::{GridRect, PixelVec};
+use crate::units::GridRect;
 
 /// Don't add padding when encoding, and allow input with or without padding when decoding.
 pub const NO_PAD_INDIFFERENT: GeneralPurposeConfig = GeneralPurposeConfig::new()
@@ -51,7 +51,6 @@ struct VisibleImage<'a> {
     image: &'a Image,
     xform: Vec<RSXform>,
     tex: Vec<Rect>,
-    inv_matrix: Matrix3<f32>,
     skia_matrix: M44,
     image_scale: GridScale,
 }
@@ -243,7 +242,7 @@ impl ImageRenderer {
         }
     }
 
-    pub fn begin_draw_image_fragments(&self) -> FragmentRenderer {
+    pub fn begin_draw_image_fragments(&self) -> FragmentRenderer<'_> {
         FragmentRenderer::new(self)
     }
 }
@@ -279,7 +278,6 @@ impl<'a> FragmentRenderer<'a> {
                     let x_scale = 1.0;
                     let y_scale = 1.0;
                     let matrix = Matrix3::from_scale((x_scale, y_scale).into());
-                    let inv_matrix = matrix.inverse();
                     let skia_matrix = Matrix4::<f32>::from_mat3(matrix);
                     let skia_matrix = M44::col_major(cast_ref(skia_matrix.as_ref()));
                     let image_scale = GridScale::new(PixelSize::new(
@@ -292,7 +290,6 @@ impl<'a> FragmentRenderer<'a> {
                         xform: Vec::new(),
                         tex: Vec::new(),
                         skia_matrix,
-                        inv_matrix,
                         image_scale,
                     }
                 });
