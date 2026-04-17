@@ -8,7 +8,7 @@ mod kitty_image;
 pub mod opengl;
 pub mod profiler;
 mod rendered_layer;
-mod rendered_window;
+pub mod rendered_window;
 mod vsync;
 
 #[cfg(target_os = "windows")]
