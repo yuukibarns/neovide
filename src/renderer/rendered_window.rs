@@ -12,6 +12,8 @@ use crate::{
     utils::RingBuffer,
 };
 
+use crate::renderer::image_renderer::{ImageFragment, ImageRenderer};
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineFragment {
     pub text: String,
@@ -68,6 +70,7 @@ struct Line {
     background_picture: Option<Picture>,
     foreground_picture: Option<Picture>,
     boxchar_picture: Option<(Picture, PixelPos<f32>)>,
+    image_fragments: Vec<ImageFragment>,
     has_transparency: bool,
     is_valid: bool,
 }
@@ -257,21 +260,28 @@ impl RenderedWindow {
         canvas: &Canvas,
         pixel_region: PixelRect<f32>,
         grid_scale: GridScale,
+        image_renderer: &ImageRenderer,
     ) {
+        let mut fragment_renderer = image_renderer.begin_draw_image_fragments();
         for (matrix, line) in self.iter_border_lines_with_transform(pixel_region, grid_scale) {
             let line = line.borrow();
             if let Some(foreground_picture) = &line.foreground_picture {
                 canvas.draw_picture(foreground_picture, Some(&matrix), None);
             }
+            fragment_renderer.draw(&line.image_fragments, &matrix, &grid_scale);
         }
+        fragment_renderer.flush(canvas);
         canvas.save();
         canvas.clip_rect(self.inner_region(pixel_region, grid_scale), None, false);
+        let mut fragment_renderer = image_renderer.begin_draw_image_fragments();
         for (matrix, line) in self.iter_scrollable_lines_with_transform(pixel_region, grid_scale) {
             let line = line.borrow();
             if let Some(foreground_picture) = &line.foreground_picture {
                 canvas.draw_picture(foreground_picture, Some(&matrix), None);
             }
+            fragment_renderer.draw(&line.image_fragments, &matrix, &grid_scale);
         }
+        fragment_renderer.flush(canvas);
         canvas.restore();
 
         for (mut matrix, line) in self.iter_border_lines_with_transform(pixel_region, grid_scale) {
@@ -315,6 +325,7 @@ impl RenderedWindow {
         root_canvas: &Canvas,
         default_background: Color,
         grid_scale: GridScale,
+        image_renderer: &ImageRenderer,
     ) -> WindowDrawDetails {
         let pixel_region_box = self.pixel_region(grid_scale);
         let pixel_region = to_skia_rect(&pixel_region_box);
@@ -332,7 +343,7 @@ impl RenderedWindow {
         root_canvas.clear(default_background);
 
         self.draw_background_surface(root_canvas, pixel_region_box, grid_scale);
-        self.draw_foreground_surface(root_canvas, pixel_region_box, grid_scale);
+        self.draw_foreground_surface(root_canvas, pixel_region_box, grid_scale, image_renderer);
 
         root_canvas.restore();
 
@@ -409,6 +420,7 @@ impl RenderedWindow {
                     background_picture: None,
                     foreground_picture: None,
                     boxchar_picture: None,
+                    image_fragments: Vec::new(),
                     has_transparency: false,
                     is_valid: false,
                 };
@@ -619,7 +631,7 @@ impl RenderedWindow {
         let grid_scale = grid_renderer.grid_scale;
 
         let mut prepare_line = |line: &Rc<RefCell<Line>>| {
-            let mut line = line.borrow_mut();
+            let line = &mut *line.borrow_mut();
             let position = self.grid_destination * grid_renderer.grid_scale;
             let boxchar_moved = match line.boxchar_picture {
                 None => false,
@@ -636,6 +648,7 @@ impl RenderedWindow {
             let line_size = GridSize::new(self.grid_size.width, 1) * grid_scale;
             let grid_rect = Rect::from_wh(line_size.width, line_size.height);
             let canvas = recorder.begin_recording(grid_rect, None);
+            line.image_fragments.clear();
 
             let mut has_transparency = false;
             let mut custom_background = false;
@@ -684,6 +697,7 @@ impl RenderedWindow {
                     i32::try_from(*width).unwrap(),
                     style,
                     position,
+                    &mut line.image_fragments,
                 );
                 text_drawn |= frag_text_drawn;
                 boxchar_drawn |= frag_box_drawn;

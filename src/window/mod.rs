@@ -56,6 +56,8 @@ pub use update_loop::ShouldRender;
 pub use update_loop::UpdateLoop;
 pub use window_wrapper::WinitWindowWrapper;
 
+use crate::renderer::{ImageRenderOpts, KittyImage};
+
 static ICON: &[u8] = include_bytes!("../../assets/neovide.ico");
 
 const DEFAULT_WINDOW_SIZE: PhysicalSize<u32> = PhysicalSize {
@@ -78,6 +80,9 @@ pub enum WindowCommand {
     ListAvailableFonts,
     FocusWindow,
     Minimize,
+    UploadImage(u64, String),
+    ShowImage(u64, ImageRenderOpts),
+    KittyImage(KittyImage),
     #[allow(dead_code)] // Theme change is only used on macOS right now
     ThemeChanged(Option<Theme>),
     #[cfg(windows)]

@@ -19,6 +19,8 @@ use crate::{
 
 use super::{box_drawing::BoxDrawingSettings, fonts::font_options::FontOptions};
 
+use crate::renderer::{parse_kitty_image_placeholder, ImageFragment};
+
 pub struct GridRenderer {
     pub shaper: CachingShaper,
     pub default_style: Arc<Style>,
@@ -191,6 +193,7 @@ impl GridRenderer {
         fragment_width: i32,
         style: &Option<Arc<Style>>,
         window_position: PixelPos<f32>,
+        image_fragments: &mut Vec<ImageFragment>,
     ) -> (bool, bool) {
         tracy_zone!("draw_foreground");
         let pos = grid_position * self.grid_scale;
@@ -199,6 +202,16 @@ impl GridRenderer {
 
         let style = style.as_ref().unwrap_or(&self.default_style);
         let mut text_drawn = false;
+
+        if parse_kitty_image_placeholder(
+            text,
+            grid_position.x.try_into().unwrap(),
+            style.foreground(&self.default_style.colors).to_bytes(),
+            style.special(&self.default_style.colors).to_bytes(),
+            image_fragments,
+        ) {
+            return (false, false);
+        }
 
         if let Some(underline_style) = style.underline {
             let stroke_size = self.shaper.stroke_size();

@@ -11,6 +11,9 @@ use strum::AsRefStr;
 
 use crate::editor::{Colors, CursorMode, CursorShape, Style, UnderlineStyle};
 
+use crate::renderer::{ImageRenderOpts, KittyImage};
+use rmpv::ext::from_value;
+
 #[derive(Clone, Debug)]
 pub enum ParseError {
     Array(Value),
@@ -48,6 +51,12 @@ impl fmt::Display for ParseError {
 impl error::Error for ParseError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         None
+    }
+}
+
+impl From<rmpv::ext::Error> for ParseError {
+    fn from(error: rmpv::ext::Error) -> Self {
+        ParseError::Format(error.to_string())
     }
 }
 
@@ -944,4 +953,25 @@ pub fn parse_redraw_event(event_value: Value) -> Result<Vec<RedrawEvent>> {
     }
 
     Ok(parsed_events)
+}
+
+pub fn parse_upload_image(arguments: Vec<Value>) -> Result<(u64, String)> {
+    let [id, data] = extract_values(arguments)?;
+    Ok((parse_u64(id)?, parse_string(data)?))
+}
+
+pub fn parse_show_image(arguments: Vec<Value>) -> Result<(u64, ImageRenderOpts)> {
+    let ([id], [opts]) = extract_values_with_optional(arguments)?;
+    let mut ret = ImageRenderOpts::default();
+    if let Some(opts) = opts {
+        if opts.is_map() {
+            ret = from_value(opts)?;
+        }
+    }
+    Ok((parse_u64(id)?, ret))
+}
+
+pub fn parse_kitty_image(arguments: Vec<Value>) -> Result<KittyImage> {
+    let [opts] = extract_values(arguments)?;
+    Ok(from_value(opts)?)
 }

@@ -16,6 +16,10 @@ use crate::{
     LoggingSender,
 };
 
+use crate::units::{GridScale, PixelRect, PixelSize};
+use rmpv::ext::to_value;
+use serde::Serialize;
+
 // Serial commands are any commands which must complete before the next value is sent. This
 // includes keyboard and mouse input which would cause problems if sent out of order.
 //
@@ -116,6 +120,14 @@ impl SerialCommand {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct Info {
+    pub client_area: PixelRect<u32>,
+    pub window_size: PixelSize<u32>,
+    pub grid_scale: GridScale,
+    pub scale_factor: f32,
+}
+
 #[derive(Debug, Clone, AsRefStr)]
 pub enum ParallelCommand {
     Quit,
@@ -126,6 +138,7 @@ pub enum ParallelCommand {
     DisplayAvailableFonts(Vec<String>),
     SetBackground(String),
     ShowError { lines: Vec<String> },
+    SetInfo(Info),
 }
 
 async fn display_available_fonts(
@@ -233,6 +246,13 @@ impl ParallelCommand {
                 show_error_message(nvim, &lines)
                     .await
                     .context("ShowError failed")
+            }
+            ParallelCommand::SetInfo(info) => {
+                let args = vec![to_value(info).unwrap()];
+                nvim.exec_lua("neovide.private.set_info(...)", args)
+                    .await
+                    .map(|_| ()) // We don't care about the result
+                    .context("Failed to set neovide.info")
             }
         };
 
