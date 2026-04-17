@@ -14,6 +14,9 @@ use crate::{
 
 use crate::renderer::image_renderer::{ImageFragment, ImageRenderer};
 
+pub const BASE_GRID_ID: u64 = 1;
+pub const NO_MULTIGRID_GRID_ID: u64 = 0;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineFragment {
     pub text: String,
@@ -400,14 +403,6 @@ impl RenderedWindow {
 
                 self.anchor_info = anchor_info;
                 self.window_type = window_type;
-
-                if self.hidden {
-                    self.hidden = false;
-                    self.position_t = 2.0; // We don't want to animate since the window is becoming visible,
-                                           // so we set t to 2.0 to stop animations.
-                    self.grid_start_position = grid_position;
-                    self.grid_destination = grid_position;
-                }
             }
             WindowDrawCommand::DrawLine {
                 row,

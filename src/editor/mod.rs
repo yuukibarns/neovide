@@ -20,7 +20,7 @@ use skia_safe::Color4f;
 use crate::{
     bridge::{GuiOption, NeovimHandler, RedrawEvent, WindowAnchor},
     profiling::{tracy_named_frame, tracy_zone},
-    renderer::{DrawCommand, WindowDrawCommand},
+    renderer::{rendered_window::BASE_GRID_ID, DrawCommand, WindowDrawCommand},
     running_tracker::RunningTracker,
     settings::Settings,
     units::{GridRect, GridSize},
@@ -405,6 +405,12 @@ impl Editor {
                 (width, height),
                 &mut self.draw_command_batcher,
             );
+            if grid != BASE_GRID_ID {
+                // Non-root multigrid windows can be resized before Neovim tells us where
+                // they actually belong. Keep those placeholder grids hidden until a later
+                // win_pos, win_float_pos, or msg_set_pos explicitly shows them.
+                window.hide(&mut self.draw_command_batcher);
+            }
             self.windows.insert(grid, window);
         }
     }
