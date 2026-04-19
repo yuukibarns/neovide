@@ -18,7 +18,7 @@ use winit::window::Theme;
 use skia_safe::Color4f;
 
 use crate::{
-    bridge::{GuiOption, NeovimHandler, RedrawEvent, WindowAnchor},
+    bridge::{EditorMode, GuiOption, NeovimHandler, RedrawEvent, WindowAnchor},
     profiling::{tracy_named_frame, tracy_zone},
     renderer::{rendered_window::BASE_GRID_ID, DrawCommand, WindowDrawCommand},
     running_tracker::RunningTracker,
@@ -35,7 +35,6 @@ pub use draw_command_batcher::DrawCommandBatcher;
 pub use style::{Colors, Style, UnderlineStyle};
 pub use window::*;
 
-const MODE_CMDLINE: u64 = 4;
 pub const MSG_ZINDEX: u64 = 200; // See the documenation for nvim_open_win
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -96,6 +95,7 @@ pub struct Editor {
     pub mode_list: Vec<CursorMode>,
     pub draw_command_batcher: DrawCommandBatcher,
     pub current_mode_index: Option<u64>,
+    current_mode: EditorMode,
     pub ui_ready: bool,
     event_loop_proxy: EventLoopProxy<UserEvent>,
     #[allow(dead_code)]
@@ -112,6 +112,7 @@ impl Editor {
             mode_list: Vec::new(),
             draw_command_batcher: DrawCommandBatcher::new(),
             current_mode_index: None,
+            current_mode: EditorMode::Normal,
             ui_ready: false,
             settings,
             event_loop_proxy,
@@ -151,6 +152,7 @@ impl Editor {
                 } else {
                     self.current_mode_index = None
                 }
+                self.current_mode = mode.clone();
                 self.draw_command_batcher
                     .queue(DrawCommand::ModeChanged(mode));
             }
@@ -626,10 +628,7 @@ impl Editor {
                 let already_there = self.cursor.parent_window_id == grid;
                 // This ^ check alone is a bit buggy though, since it fails when the cursor is
                 // technically still in the edit window but "temporarily" at the cmdline. (#1207)
-                let using_cmdline = self
-                    .current_mode_index
-                    .map(|current| current == MODE_CMDLINE)
-                    .unwrap_or(false);
+                let using_cmdline = matches!(self.current_mode, EditorMode::CmdLine);
 
                 if !intentional && !already_there && !using_cmdline {
                     trace!(
